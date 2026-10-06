@@ -7,65 +7,72 @@ package idv.neo.entity.common
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNames
 
 /**
- * [方案 A 實作]
- * 單一 Rich Data Class，同時具備 Network DTO、UI 狀態能力與 Exception 轉換方法。
+ * [方案 B 核心實作]
+ * 定義為 Sealed Interface，完美融合 Network Response DTO、UI 狀態 (Loading/Empty/Success/Error)
+ * 與 Throwable 異常處置。適用於 Compose `when(response) { is ApiResponse.Success -> ... }` 的模式匹配。
  */
 @OptIn(ExperimentalSerializationApi::class)
 @Serializable(with = ApiResponseSerializer::class)
-data class ApiResponse<T>(
-    @SerialName("code")
-    @JsonNames("ret", "code")
-    val code: Int = -1,
+sealed interface ApiResponse<out T> {
 
-    @SerialName("message")
-    @JsonNames("msg", "message")
-    val message: String = "",
+    /** 1. 成功狀態 (帶有資料與業務碼) */
+    @Serializable
+    data class Success<out T>(
+        @SerialName("code")
+        @JsonNames("ret", "code")
+        val code: Int = 200,
 
-    @SerialName("data")
-    val data: T? = null,
+        @SerialName("message")
+        @JsonNames("msg", "message")
+        val message: String = "success",
 
-    val rawData: JsonElement? = null,
+        @SerialName("data")
+        val data: T
+    ) : ApiResponse<T>
 
-    val isLoading: Boolean = false
-) {
+    /** 2. 失敗 / 異常狀態 (同時繼承 Throwable，整合原 ApiException 功能) */
+    @Serializable
+    data class Error(
+        @SerialName("code")
+        @JsonNames("ret", "code")
+        val code: Int = -1,
+        // 修復欄位覆蓋衝突：Error 繼承了父類別 Throwable(message, cause)，其中的 message 必須明確標示 override。
+        @SerialName("message")
+        @JsonNames("msg", "message")
+        override val message: String = "",
+        val rawData: JsonElement? = null,
+        // 修復 Serializer 崩潰：kotlinx.serialization 預設會試圖序列化 constructor 內的所有欄位，但 Throwable 不是 @Serializable 類別。加上 @Transient 可指示序列化器跳過此欄位。
+        @Transient
+        override val cause: Throwable? = null
+    ) : ApiResponse<Nothing>, Throwable(message, cause)
 
-    val isSuccess: Boolean get() = (code == 200 || code == 202 || code == 0) && !isLoading
-    val isFailure: Boolean get() = !isSuccess && !isLoading
-    val isEmpty: Boolean get() = isSuccess && data == null
+    /** 3. UI 載入中狀態 */
+    data object Loading : ApiResponse<Nothing>
 
-    /** 轉為 Exception 物件（Kotlin 帶有泛型參數 <T> 之類別無法直接繼承 Throwable，故提供轉寫屬性） */
-    val exception: Exception
-        get() = ApiException(code, message, rawData)
+    /** 4. 空資料狀態 */
+    data object Empty : ApiResponse<Nothing>
 
-    inline fun onSuccess(block: (data: T) -> Unit): ApiResponse<T> {
-        if (isSuccess && data != null) {
-            block(data)
-        }
-        return this
-    }
+    // --- UI 便捷屬性 ---
+    val isSuccess: Boolean get() = this is Success
+    val isError: Boolean get() = this is Error
+    val isLoading: Boolean get() = this is Loading
 
-    inline fun onFailure(block: (code: Int, msg: String) -> Unit): ApiResponse<T> {
-        if (isFailure) {
-            block(code, message)
-        }
-        return this
-    }
+    fun getOrNull(): T? = (this as? Success)?.data
+}
 
-    inline fun onLoading(block: () -> Unit): ApiResponse<T> {
-        if (isLoading) {
-            block()
-        }
-        return this
-    }
+// --- 擴充 Extension Functions ---
+// 修復 Kotlin 介面限制：Kotlin 規定 interface 內部的虛擬成員函式禁止使用 inline；移至介面外部作為擴充函式即可合法標註 inline。
+inline fun <T> ApiResponse<T>.onSuccess(action: (data: T) -> Unit): ApiResponse<T> {
+    if (this is ApiResponse.Success) action(data)
+    return this
+}
 
-    fun getOrNull(): T? = if (isSuccess) data else null
-    fun getOrDefault(default: T): T = getOrNull() ?: default
-
-    companion object {
-        fun <T> loading(): ApiResponse<T> = ApiResponse(isLoading = true)
-    }
+inline fun <T> ApiResponse<T>.onError(action: (code: Int, message: String) -> Unit): ApiResponse<T> {
+    if (this is ApiResponse.Error) action(code, message)
+    return this
 }
