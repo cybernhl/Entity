@@ -60,7 +60,9 @@ subprojects {
         if (project.plugins.hasPlugin('com.android.library')) {
             android {
                 publishing {
-                    singleVariant("release")
+                    singleVariant("release") {
+                        withSourcesJar()
+                    }
                 }
             }
         }
