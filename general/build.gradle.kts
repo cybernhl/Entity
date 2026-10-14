@@ -5,9 +5,10 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.serialization)
+    `maven-publish`
 }
 
-group = "com.biqbila.entity.common"
+group = "com.github.cybernhl.Entity"
 version = "1.0-SNAPSHOT"
 
 configurations.all {
@@ -70,3 +71,20 @@ android {
         minSdk = 21
     }
 }
+
+tasks.matching { it.name.startsWith("publish") }.configureEach {
+    doLast {
+        val userHome = System.getProperty("user.home")
+        val mavenLocalDir = File(userHome, ".m2/repository/com/github/cybernhl/Entity")
+        if (mavenLocalDir.exists()) {
+            mavenLocalDir.walkTopDown().filter { it.isFile && it.name.endsWith("-metadata.jar") }.forEach { file ->
+                val targetFile = File(file.parentFile, file.name.replace("-metadata.jar", ".jar"))
+                if (!targetFile.exists()) {
+                    file.copyTo(targetFile, overwrite = true)
+                }
+            }
+        }
+    }
+}
+
+
