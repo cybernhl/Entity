@@ -2,17 +2,11 @@ buildscript {
     ext {
         //Ref : https://developer.android.com/build/releases/past-releases
         agp_gradle = libs.versions.agp.get()
-        kotlin_version = "1.9.25"
-        println "Show  kotlin_version  : ${kotlin_version}"
-        kotlin_version = libs.versions.kotlin.get()
-        println "Show  kotlin_version from lib.version.toml  : ${kotlin_version}"
         coroutine_version = "1.6.4"
         jb_compose_version = libs.versions.jetbrains.compose.multiplatform.get()
 
         navigation_version = libs.versions.androidx.navigation.get()
     }
-
-    println "Show  fianl kotlin_version  : ${kotlin_version}"
 
     repositories {
         gradlePluginPortal()
@@ -33,11 +27,18 @@ buildscript {
 }
 
 plugins {
+    alias(libs.plugins.android.application) apply false
     alias(libs.plugins.android.library) apply false
+    alias(libs.plugins.android.kotlin.multiplatform.library) apply false
+
     alias(libs.plugins.kotlin.jvm) apply false
     alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.kotlin.multiplatform) apply false
+
     alias(libs.plugins.kotlin.serialization) apply false
+
+//    alias(libs.plugins.ksp) apply false
+    alias(libs.plugins.de.ktorfit) apply false
 }
 
 allprojects {
@@ -60,13 +61,28 @@ subprojects {
         if (project.plugins.hasPlugin('com.android.library')) {
             android {
                 publishing {
-                    singleVariant("release") {
-                        withSourcesJar()
-                    }
+                    singleVariant("release")
                 }
             }
         }
     }
+
+//    tasks.matching { it.name.startsWith("publish") }.configureEach {
+//        doLast {
+//            def userHome = System.getProperty("user.home")
+//            def mavenLocalDir = new File(userHome, ".m2/repository/com/github/cybernhl/Entity")
+//            if (mavenLocalDir.exists()) {
+//                mavenLocalDir.eachFileRecurse { file ->
+//                    if (file.isFile() && file.name.endsWith("-metadata.jar")) {
+//                        def targetFile = new File(file.parentFile, file.name.replace("-metadata.jar", ".jar"))
+//                        if (!targetFile.exists()) {
+//                            targetFile.bytes = file.bytes
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }
 
     configurations.all {
         resolutionStrategy.eachDependency {
