@@ -9,6 +9,7 @@ kotlin = "2.4.10"
 kotlinx-coroutines = "1.11.0"
 #region Json &  Gson & Serialization
 kotlinx-serialization = "1.11.0"
+kotlin-wrappers = "2026.10.5"
 #endregion
 ksp = "2.3.11"
 #endregion
@@ -209,6 +210,7 @@ kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-
 
 kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinx-serialization" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+wrappers-kotlin-browser = { module = "org.jetbrains.kotlin-wrappers:kotlin-browser", version.ref = "kotlin-wrappers" }
 #endregion
 
 #region android support & arch

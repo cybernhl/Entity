@@ -81,3 +81,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Entity"
 include(":general")
+include(":trilivechat")
