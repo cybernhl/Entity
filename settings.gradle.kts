@@ -80,4 +80,8 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "Entity"
-include(":general")
+include(":entity_common")
+project(":entity_common").projectDir = file("./general")
+
+include(":entity_payment")
+project(":entity_payment").projectDir = file("./payment")
